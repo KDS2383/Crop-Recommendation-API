@@ -1,0 +1,25 @@
+# --- Python ---
+venv/
+.venv/
+env/
+.env/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ... other sections like OS files, IDE files, logs ...
+
+# --- Data & Models ---
+# NOTE: Models and data are INCLUDED for this deployment strategy
+# DO NOT ignore them here unless using LFS for them specifically
+# (which you are, via .gitattributes)
+
+# Example of things you MIGHT ignore if not needed in repo:
+# temp_outputs/
+# *.log
+# .ipynb_checkpoints
+
+# Secrets
+.env
+*.env

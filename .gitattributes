@@ -1,0 +1,16 @@
+# Track model files in the models directory
+models/*.joblib filter=lfs diff=lfs merge=lfs -text
+models/*.parquet filter=lfs diff=lfs merge=lfs -text
+
+# Optional: Track large data files if necessary
+# data/*.csv filter=lfs diff=lfs merge=lfs -text
+# data/*.parquet filter=lfs diff=lfs merge=lfs -text
+
+# Ensure .gitignore and other text files are NEVER tracked
+*.txt text
+*.md text
+*.py text
+*.yaml text
+*.yml text
+.gitignore text
+.gitattributes text
