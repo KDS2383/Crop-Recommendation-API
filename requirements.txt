@@ -8,3 +8,4 @@ xgboost>=1.5
 joblib>=1.0
 requests>=2.25 # Keep if needed for other parts, though not for core rec here
 pyarrow>=6.0
+psutil>=5.8.0 
