@@ -10,6 +10,7 @@ import time
 import os
 from typing import List, Optional
 import threading # Import threading for the lock
+import psutil
 
 # Import Pydantic BaseModel
 from pydantic import BaseModel
@@ -60,6 +61,13 @@ PARAMETER_WEIGHTS = {
     'Soil_Phosphorus': 1.0, 'Soil_Potassium': 1.0, 'Avg_Humidity': 1.0,
     'Min_Humidity': 1.0, 'Soil_CEC': 0.75, 'Avg_Wind_Speed': 0.5
 }
+
+
+# --- Get memory BEFORE loading ---
+process = psutil.Process(os.getpid())
+mem_before = process.memory_info().rss / (1024 * 1024) # Resident Set Size in MiB
+print(f"Memory before loading: {mem_before:.2f} MiB")
+
 
 # --- Global Variables: Load non-model artifacts at startup ---
 print("Loading non-model artifacts and data...")
@@ -116,6 +124,12 @@ try:
         print("Calculated parameter ranges.")
 
     print("Non-model artifacts and data loaded successfully.")
+    
+    # --- Get memory AFTER loading ---
+    mem_after = process.memory_info().rss / (1024 * 1024) # RSS in MiB
+    print(f"Memory after loading non-model artifacts: {mem_after:.2f} MiB")
+    print(f"Startup memory usage (approx): {mem_after - mem_before:.2f} MiB")
+
 
 except FileNotFoundError as e:
     print(f"FATAL ERROR: Could not load required file during startup: {e}.")
@@ -200,7 +214,8 @@ def calculate_suitability(loc_conditions, crop_ideal, param_cols, ranges, param_
         if debug_print:
             try:
                 loc_str = loc_val if loc_val is not None else "N/A"; ideal_str = ideal_val if ideal_val is not None else "N/A"
-                if isinstance(ideal_str, dict): ideal_str = "{Dict}"; if isinstance(loc_str, dict): loc_str = "{Dict}"
+                if isinstance(ideal_str, dict): ideal_str = "{Dict}"; 
+                if isinstance(loc_str, dict): loc_str = "{Dict}"
                 print(f"  Param: {param:<15} | Loc: {loc_str!s:<8} | Ideal: {ideal_str!s:<8}", end='')
             except TypeError as e_print: print(f"\nDEBUG: Print Formatting TypeError for Param '{param}'!") ; print(" | Skipping...", end='')
         if loc_val is not None and ideal_val is not None and not pd.isna(loc_val) and not pd.isna(ideal_val) and isinstance(loc_val, (int, float)) and isinstance(ideal_val, (int, float)):
@@ -211,7 +226,7 @@ def calculate_suitability(loc_conditions, crop_ideal, param_cols, ranges, param_
                      diff_str = f"{difference:<8.2f}" if isinstance(difference, (int, float)) else "N/A"; range_str = f"{param_range:<8.2f}" if isinstance(param_range, (int, float)) else "N/A"; norm_str = f"{normalized_diff:.4f}" if isinstance(normalized_diff, (int, float)) else "N/A"; weight_str = f"{weight:.2f}"; wdiff_str = f"{weighted_diff:.4f}"
                      print(f" | Diff: {diff_str} | Range: {range_str} | NormDiff: {norm_str} | Wgt: {weight_str} | WgtDiff: {wdiff_str}")
                 except TypeError as e_print2: pass
-        else: skipped_count += 1;
+        else: skipped_count += 1
         if debug_print and e_print is None: print(" | Skipping (Missing/Invalid)")
     if debug_print: print(f"--- Summary for {crop_name_log} ---"); print(f"  Params Calculated: {calculated_count}"); print(f"  Params Skipped:    {skipped_count}"); print(f"  Elevation Penalty Applied: {elevation_penalty_applied}"); print(f"--- Final Weighted Total Dissimilarity: {total_dissimilarity:.4f} ---")
     return total_dissimilarity
@@ -422,6 +437,7 @@ async def root():
 
 # --- uvicorn command (Unchanged) ---
 # uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 # Or for Render/Deta: uvicorn main:app --host 0.0.0.0 --port $PORT
 
 # --- END OF FILE main.py (Option 2 Implemented) ---
