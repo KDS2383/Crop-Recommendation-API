@@ -1,0 +1,21 @@
+{
+    "latitude": 31.6340,
+    "longitude": 74.8723,
+    "elevation": 230.0,
+    "soil_ph": 7.5,
+    "soil_nitrogen": 260,
+    "soil_phosphorus": 180,
+    "soil_potassium": 240,
+    "soil_moisture": 380,
+    "soil_cec": 250,
+    "avg_temperature": 25.0,
+    "min_temperature": 10.0,
+    "avg_humidity": 60.0,
+    "min_humidity": 25.0,
+    "avg_wind_speed": 8.0,
+    "total_rainfall": 700.0,
+    "historical_crops": [
+        "Wheat",
+        "Rice"
+    ]
+}
