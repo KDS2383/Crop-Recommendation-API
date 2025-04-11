@@ -15,7 +15,7 @@ files = {
 }
 
 for filename, file_id in files.items():
-    output = f"D:/VS_Code/crop-recommendation-api-service/models-gdrive/{filename}"
+    output = f"/models/{filename}"
     url = f"https://drive.google.com/uc?id={file_id}"
     print(f"⬇️ Downloading {filename}...")
     gdown.download(url, output, quiet=False)
