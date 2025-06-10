@@ -347,7 +347,26 @@ def recommend_predict_then_validate(user_input_dict, top_k, scaler, mlb, # <<< R
 
     return top_3
 
-
+@app.get("/proxy-image")
+async def proxy_image(url: str):
+    """
+    Proxies external crop images to avoid CORS issues for frontend rendering & PDF generation.
+    Usage: /proxy-image?url=https://example.com/image.jpg
+    """
+    try:
+        # Use a timeout to prevent requests from hanging indefinitely
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.get(url)
+            # Raise an error for non-200 responses
+            response.raise_for_status() 
+            
+            content_type = response.headers.get("Content-Type", "image/jpeg")
+            return StreamingResponse(response.aiter_bytes(), media_type=content_type)
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Failed to fetch image from source: {e}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error proxying image: {str(e)}")
+        
 # === FastAPI Endpoint (Adjusted) ===
 
 @app.post("/recommend", response_model=RecommendationResponse)
