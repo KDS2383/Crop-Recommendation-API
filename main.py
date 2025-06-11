@@ -12,6 +12,9 @@ from typing import List, Optional
 import threading # Import threading for the lock
 import psutil
 
+import httpx # <--- ADD THIS IMPORT
+from starlette.responses import Response # <--- ADD THIS IMPORT
+
 # Import Pydantic BaseModel
 from pydantic import BaseModel
 
@@ -42,6 +45,24 @@ class RecommendationResponse(BaseModel):
     processing_time_seconds: float
 
 app = FastAPI()
+
+# --- Middleware to add CORS headers ---
+# This is crucial for allowing your React frontend to call the new proxy endpoint.
+from fastapi.middleware.cors import CORSMiddleware
+
+origins = [
+    "http://localhost:8080",  # Your React dev server
+    "https://earth-bloom-precision-agri.vercel.app", # Your production frontend URL
+    # Add any other frontend URLs here
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- Configuration (Unchanged) ---
 MODEL_DIR = 'models'
@@ -347,26 +368,41 @@ def recommend_predict_then_validate(user_input_dict, top_k, scaler, mlb, # <<< R
 
     return top_3
 
-@app.get("/proxy-image")
-async def proxy_image(url: str):
+# === *** NEW PROXY ENDPOINT *** ===
+@app.get("/proxy")
+async def asset_proxy(url: str = Query(...)):
     """
-    Proxies external crop images to avoid CORS issues for frontend rendering & PDF generation.
-    Usage: /proxy-image?url=https://example.com/image.jpg
+    A simple proxy to fetch external resources (images, CSS)
+    and attach the necessary CORS headers.
     """
-    try:
-        # Use a timeout to prevent requests from hanging indefinitely
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(url)
-            # Raise an error for non-200 responses
-            response.raise_for_status() 
+    if not url:
+        raise HTTPException(status_code=400, detail="URL parameter is missing.")
+
+    # Use httpx for asynchronous requests
+    async with httpx.AsyncClient() as client:
+        try:
+            print(f"Proxying request for: {url}")
+            # Follow redirects, set a reasonable timeout
+            response = await client.get(url, follow_redirects=True, timeout=15.0)
             
-            content_type = response.headers.get("Content-Type", "image/jpeg")
-            return StreamingResponse(response.aiter_bytes(), media_type=content_type)
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Failed to fetch image from source: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error proxying image: {str(e)}")
-        
+            # Check if the request was successful
+            response.raise_for_status()
+
+            # Get content type from the original response
+            content_type = response.headers.get('content-type', 'application/octet-stream')
+
+            # Return the content with the original content type
+            # FastAPI's CORSMiddleware will add the 'Access-Control-Allow-Origin' header
+            return Response(content=response.content, media_type=content_type)
+
+        except httpx.RequestError as exc:
+            print(f"An error occurred while proxying {exc.request.url!r}.")
+            raise HTTPException(status_code=502, detail=f"Error fetching remote resource: {exc}")
+        except httpx.HTTPStatusError as exc:
+            print(f"Error response {exc.response.status_code} while proxying {exc.request.url!r}.")
+            raise HTTPException(status_code=exc.response.status_code, detail=f"Remote server returned error: {exc.response.status_code}")
+
+
 # === FastAPI Endpoint (Adjusted) ===
 
 @app.post("/recommend", response_model=RecommendationResponse)
