@@ -1,7 +1,7 @@
 # --- START OF FILE main.py (Option 2 Implemented) ---
 
 import fastapi
-from fastapi import FastAPI, HTTPException # Ensure FastAPI and HTTPException are imported
+from fastapi import FastAPI, HTTPException, Query 
 import pandas as pd
 import numpy as np
 import joblib
